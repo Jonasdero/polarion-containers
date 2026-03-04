@@ -17,7 +17,7 @@ RUN echo 'Acquire::Retries "3";' > /etc/apt/apt.conf.d/80-retries && \
 RUN apt-get -y update && \
 	apt-get -y install --no-install-recommends sudo unzip expect wget locales libc6 \
 	apache2 subversion libapache2-mod-svn libswt-gtk-4-java apache2-utils libaprutil1-dbd-pgsql \
-	postgresql postgresql-client postgresql-contrib && \
+	postgresql postgresql-client postgresql-contrib util-linux-extra && \
 	locale-gen en_US.UTF-8 && \
 	update-locale LANG=en_US.UTF-8 && \
 	apt-get clean && \
@@ -71,7 +71,7 @@ RUN echo "JAVA_HOME and JDK_HOME have been successfully set to:" && \
 
 # Copy install.expect to Polarion directory and make both scripts executable
 COPY --chmod=755 --chown=0:0 install.expect ./
-
+  
 # Unzip Polarion and install it
 RUN --mount=type=bind,source=./data/,target=/data/ \
 	set -x && \
