@@ -85,6 +85,7 @@ docker exec -it polarion-dev sh -c "tail -f $(ls -t /opt/polarion/data/logs/main
 
 - Never commit credentials or license files. Use a gitignored `.env` for local env vars, or mount secrets at runtime.
 - Validate third-party downloads (JDK, archives) via checksums; avoid `--no-check-certificate` in production builds.
+- If local Polarion activation breaks because a repo-synced `polarion.lic` is expired, delete the runtime `polarion.lic`, restart Polarion, and continue from the core activation flow before deeper churn.
 
 ## Conventions & repository layout
 

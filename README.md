@@ -148,7 +148,7 @@ After startup, Apache serves the bundled Subversion repository through both of t
 - `http://<host>/repo`
 - `http://<host>/repo-local`
 
-The startup scripts also normalize the bundled SVN password file so the default bootstrap user remains `admin` / `admin`.
+On first start with a new or empty SVN volume, the startup scripts seed the bundled repository data. On later restarts and redeployments with an initialized SVN volume, they leave the repository content in place and normalize the password file both before and after Polarion service startup so the built-in service user remains `polarion` / `aurora` and the bootstrap admin remains `admin` / `admin`, while preserving other existing entries. The scripts also re-apply `polarion:www-data` ownership plus group-write permissions across the mounted SVN data so Apache WebDAV commits can create transaction files under `repo/db`.
 
 ## 🛠️ Development & Debugging
 
