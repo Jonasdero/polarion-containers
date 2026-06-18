@@ -13,6 +13,7 @@ OTHER_PARAMS=(
     "com.siemens.polarion.license.salt.enabled=false"
     "com.siemens.polarion.analytics.enabled=false"
     "com.polarion.platform.internalPG=polarion:polarion@localhost:5433"
+    "com.siemens.polarion.platform.locationIndex.enabled=true"
 )
 
 # Configure allowed hosts for Tomcat service
@@ -33,6 +34,19 @@ PARAMS=(
     "$TomcatServiceRequestSafeListedHosts"
     "${OTHER_PARAMS[@]}"
 )
+
+# Configure outgoing SMTP for mail notifications when an SMTP host is provided.
+# Lets developers capture Polarion notification mails with a catcher such as Mailpit.
+# Skipped entirely when SMTP_HOST is unset, so standalone runs keep their defaults.
+if [[ -n "$SMTP_HOST" ]]; then
+    echo "Configuring SMTP notifications via $SMTP_HOST:${SMTP_PORT:-25}"
+    PARAMS+=(
+        "com.polarion.platform.persistence.notifications.disabled=false"
+        "announcer.smtp.host=$SMTP_HOST"
+        "announcer.smtp.port=${SMTP_PORT:-25}"
+        "announcer.smtp.auth=false"
+    )
+fi
 
 # Remove existing end marker
 sed -i '/^# End property file$/d' "$FILE"
