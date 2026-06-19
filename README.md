@@ -119,7 +119,7 @@ Note: Docker Compose files in this repository are Docker-only. Apple `container`
     docker-compose up -d
     ```
 
-The checked-in Compose files cap the Polarion container at `4g` RAM, default the JVM to `-Xmx3g -Xms3g`, and persist the Polarion workspace to avoid unnecessary full reindexing after container recreation.
+The checked-in Compose files cap the Polarion container at `4g` RAM, default the JVM to `-Xmx1536m -Xms1536m`, and persist the Polarion workspace to avoid unnecessary full reindexing after container recreation. `polarionctl start` applies runtime-aware memory defaults which may set a higher heap (e.g. `-Xmx3g` on standard Docker, `-Xmx2560m` on Apple container).
 
 ## ⚙️ Configuration & Customization
 
@@ -140,7 +140,7 @@ To add your own configuration:
 
 | Variable        | Description                                  | Default                       |
 | :-------------- | :------------------------------------------- | :---------------------------- |
-| `JAVA_OPTS`     | Java memory and VM arguments                 | `-Xmx3g -Xms3g`               |
+| `JAVA_OPTS`     | Java memory and VM arguments                 | `-Xmx1536m -Xms1536m` (Compose); runtime-aware via `polarionctl` |
 | `JDWP_ENABLED`  | Enable Java Debug Wire Protocol              | `true`                        |
 | `ALLOWED_HOSTS` | Comma-separated list of allowed host headers | `localhost,127.0.0.1,0.0.0.0` |
 
@@ -207,7 +207,7 @@ If you are developing on Apple silicon with macOS 26 or later, see [docs/apple-c
 ## 🔍 Troubleshooting
 
 - **Port Conflicts:** Ensure ports 80, 5005, and 5433 are free.
-- **Memory:** Docker, Compose, and Apple `container` use the same `4g` container RAM and `-Xmx3g -Xms3g` defaults unless you override them explicitly.
+- **Memory:** Docker, Compose, and Apple `container` all cap the container at `4g` RAM. The Compose file defaults the JVM to `-Xmx1536m -Xms1536m`; `polarionctl start` applies runtime-aware heap defaults (`-Xmx3g` on Docker, `-Xmx2560m` on Apple container). Override with `JAVA_OPTS` as needed.
 - **Apple `container` builder:** `bash scripts/polarionctl.sh build-image` starts the builder on demand with a `4g` cap and stops it again after the image build finishes.
 - **Workspace persistence:** `bash scripts/polarionctl.sh start` now mounts a persistent workspace volume so successful starts do not trigger a fresh full reindex on every restart.
 - **Apple `container` first start:** A cold `linux/amd64` start on Apple silicon can spend multiple minutes in image unpacking before the container becomes visible or HTTP responds.

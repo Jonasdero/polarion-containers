@@ -94,6 +94,7 @@ RUN --mount=type=bind,source=./data/,target=/data/ \
 	../install.expect || true && \
 	test -d /opt/polarion/polarion && \
 	test -d /opt/polarion/data/svn && \
+	test -f /opt/polarion/etc/polarion.properties && \
 	cd .. && \
 	rm -r Polarion && \
 	mkdir -p /opt/polarion/bootstrap/svn && \

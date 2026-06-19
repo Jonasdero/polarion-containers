@@ -64,7 +64,7 @@ expect {
         exp_continue
     }
 
-    -re {failed|FATAL|ERROR:.*installer} {
+    -re {FATAL|ERROR:|Installation failed} {
         exit 1
     }
 

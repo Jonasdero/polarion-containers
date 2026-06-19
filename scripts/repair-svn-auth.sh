@@ -94,7 +94,7 @@ if [ -d "/etc/apache2" ]; then
 	perl -0pi -e 's#(<Location /repo-local>.*?AuthUserFile )".*?"#${1}"/etc/apache2/polarion-svn-http.passwd"#sg' \
 		/etc/apache2/conf-available/polarionSVN.conf \
 		/etc/apache2/conf-enabled/polarionSVN.conf
-	perl -0pi -e 's#<RequireAny>\nRequire local\nRequire valid-user\n</RequireAny>#Require valid-user#g' \
+	perl -0pi -e 's#[ \t]*<RequireAny>[ \t]*\r?\n[ \t]*Require local[ \t]*\r?\n[ \t]*Require valid-user[ \t]*\r?\n[ \t]*</RequireAny>[ \t]*#Require valid-user#g' \
 		/etc/apache2/conf-available/polarionSVN.conf \
 		/etc/apache2/conf-enabled/polarionSVN.conf
 fi
