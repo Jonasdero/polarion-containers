@@ -17,6 +17,8 @@ Actions:
   build-image    Build the Polarion image for the selected runtime
   start          Start Polarion for the selected runtime
   stop           Stop and remove Polarion for the selected runtime
+  reindex        Stop Polarion, clear workspace indexes, and start again
+  repair-auth    Normalize the SVN HTTP password file inside the running runtime
   logs           Stream Polarion application logs
   errors         Stream Polarion application errors only
 EOF
@@ -64,6 +66,7 @@ case "${action}" in
 	start)
 		polarion_ensure_volume "${POLARION_DATA_VOLUME}"
 		polarion_ensure_volume "${POLARION_EXTENSIONS_VOLUME}"
+		polarion_ensure_volume "${POLARION_WORKSPACE_VOLUME}"
 		polarion_remove_container
 
 		if polarion_is_apple_container_runtime; then
@@ -81,6 +84,7 @@ case "${action}" in
 				-e "JDWP_ENABLED=${POLARION_JDWP_ENABLED}"
 				-v "${POLARION_DATA_VOLUME}:/opt/polarion/data/svn"
 				-v "${POLARION_EXTENSIONS_VOLUME}:/opt/polarion/polarion/extensions"
+				-v "${POLARION_WORKSPACE_VOLUME}:/opt/polarion/data/workspace"
 			)
 			if polarion_platform_needs_rosetta; then
 				run_args+=(--rosetta)
@@ -102,10 +106,13 @@ case "${action}" in
 				-e "JDWP_ENABLED=${POLARION_JDWP_ENABLED}" \
 				-v "${POLARION_DATA_VOLUME}:/opt/polarion/data/svn" \
 				-v "${POLARION_EXTENSIONS_VOLUME}:/opt/polarion/polarion/extensions" \
+				-v "${POLARION_WORKSPACE_VOLUME}:/opt/polarion/data/workspace" \
 				"${POLARION_IMAGE}"
 		fi
 		polarion_sync_repo_license
 		polarion_wait_for_http_access
+		polarion_auto_activate_trial_if_needed
+		bash "${SCRIPT_DIR}/repair-svn-auth.sh"
 		;;
 	stop)
 		if polarion_is_apple_container_runtime; then
@@ -115,11 +122,17 @@ case "${action}" in
 			docker rm -f "${POLARION_CONTAINER_NAME}" >/dev/null 2>&1 || true
 		fi
 		;;
+	reindex)
+		polarion_reindex_workspace
+		;;
 	logs)
 		polarion_runtime_exec "${POLARION_CONTAINER_NAME}" 'tail -f $(ls -t /opt/polarion/data/logs/main/*.log | head -n 1)'
 		;;
 	errors)
 		polarion_runtime_exec "${POLARION_CONTAINER_NAME}" 'tail -f $(ls -t /opt/polarion/data/logs/main/*.log | head -n 1) | grep --line-buffered -E "ERROR|Exception|Caused by"'
+		;;
+	repair-auth)
+		bash "${SCRIPT_DIR}/repair-svn-auth.sh"
 		;;
 	*)
 		usage

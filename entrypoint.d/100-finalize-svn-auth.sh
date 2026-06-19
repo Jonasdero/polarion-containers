@@ -1,6 +1,9 @@
 #!/bin/bash
 
 SVN_DATA_DIR="/opt/polarion/data/svn"
+SVN_HTTP_AUTH_FILE="/etc/apache2/polarion-svn-http.passwd"
+SVN_INTERNAL_PASSWD_FILE="$SVN_DATA_DIR/passwd"
+SVN_EXTERNAL_PASSWD_FILE="$SVN_DATA_DIR/passwd_credentials"
 POLARION_PROPERTIES="/opt/polarion/etc/polarion.properties"
 
 read_polarion_property() {
@@ -48,11 +51,27 @@ SVN_REPO_PASSWORD="$(read_polarion_property "password" "aurora")"
 SVN_ADMIN_USER="$(read_polarion_property "adminUser" "admin")"
 SVN_ADMIN_PASSWORD="$(read_polarion_property "adminPasswd" "admin")"
 
-# Polarion startup can rewrite the SVN htpasswd file after the early bootstrap step.
-# Normalize once more after the service start so Apache auth remains deterministic.
+# Polarion startup can rewrite the SVN htpasswd files after the early bootstrap step.
+# Normalize both the internal runtime file and the external Apache copy once more
+# after the service start so Polarion UI access and direct HTTP access stay aligned.
 normalize_svn_passwd_file \
-	"$SVN_DATA_DIR/passwd" \
+	"$SVN_INTERNAL_PASSWD_FILE" \
 	"$SVN_REPO_USER" \
 	"$SVN_REPO_PASSWORD" \
 	"$SVN_ADMIN_USER" \
 	"$SVN_ADMIN_PASSWORD"
+
+normalize_svn_passwd_file \
+	"$SVN_EXTERNAL_PASSWD_FILE" \
+	"$SVN_REPO_USER" \
+	"$SVN_REPO_PASSWORD" \
+	"$SVN_ADMIN_USER" \
+	"$SVN_ADMIN_PASSWORD"
+
+if [ -d "/srv/polarion/svn" ] && [ ! "/srv/polarion/svn/passwd" -ef "$SVN_INTERNAL_PASSWD_FILE" ]; then
+	install -o polarion -g www-data -m 0664 "$SVN_INTERNAL_PASSWD_FILE" "/srv/polarion/svn/passwd"
+fi
+
+if [ -d "/etc/apache2" ]; then
+	install -o root -g www-data -m 0644 "$SVN_EXTERNAL_PASSWD_FILE" "$SVN_HTTP_AUTH_FILE"
+fi

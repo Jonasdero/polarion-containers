@@ -18,6 +18,7 @@ validate_apache_config() {
 
 SVN_APACHE_CONF="/etc/apache2/conf-available/polarionSVN.conf"
 SVN_ALIAS_LOCATION="/repo-local"
+SVN_HTTP_AUTH_FILE="/etc/apache2/polarion-svn-http.passwd"
 SVN_ALIAS_RELOAD_REQUIRED=0
 
 normalize_svn_apache_config() {
@@ -25,7 +26,7 @@ normalize_svn_apache_config() {
     local tmp
 
     tmp="$(mktemp)"
-    awk '
+    awk -v svn_http_auth_file="$SVN_HTTP_AUTH_FILE" '
         BEGIN {
             skip_repo_local = 0
             skip_ldap = 0
@@ -72,7 +73,7 @@ normalize_svn_apache_config() {
             print "# How to authenticate a user. (NOTE: Polarion does not currently support HTTP Digest access authentication.)"
             print "AuthType Basic"
             print "AuthName \"Subversion repository\""
-            print "AuthUserFile \"/srv/polarion/svn/passwd\""
+            print "AuthUserFile \"" svn_http_auth_file "\""
             print ""
             print "</Location>"
             print ""
@@ -101,7 +102,7 @@ normalize_svn_apache_config() {
                 print "# How to authenticate a user. (NOTE: Polarion does not currently support HTTP Digest access authentication.)"
                 print "AuthType Basic"
                 print "AuthName \"Subversion repository\""
-                print "AuthUserFile \"/srv/polarion/svn/passwd\""
+                print "AuthUserFile \"" svn_http_auth_file "\""
                 print ""
                 print "</Location>"
             }

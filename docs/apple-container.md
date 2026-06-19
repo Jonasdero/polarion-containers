@@ -25,10 +25,10 @@ Start Apple `container` system services:
 container system start
 ```
 
-Start the builder with enough resources for Polarion:
+Start the builder with the repository hard cap:
 
 ```bash
-container builder start --cpus 8 --memory 8g
+container builder start --cpus 8 --memory 4g
 ```
 
 Build the image from this repository:
@@ -54,6 +54,7 @@ container run -d \
   -e JDWP_ENABLED=true \
   -v polarion_repo:/opt/polarion/data/svn \
   -v polarion_extensions:/opt/polarion/polarion/extensions \
+  -v polarion_workspace:/opt/polarion/data/workspace \
   polarion:local
 ```
 
@@ -78,6 +79,7 @@ The repository includes runtime tasks in [.vscode/tasks.json](../.vscode/tasks.j
 - `Polarion: Start`
 - `Polarion: Full Start`
 - `Polarion: Stop`
+- `Polarion: Reindex Workspace`
 - `Polarion: Live Logs`
 - `Polarion: Live Errors ONLY`
 - `Polarion: Redeploy Workspace`
@@ -98,7 +100,10 @@ Recommended order:
 - The Apple workflow uses named volumes because anonymous volumes are not automatically deleted by Apple `container` on `--rm`.
 - The current documented Apple path assumes `linux/amd64` with `--rosetta`. Native `arm64` validation for Polarion is still an open item.
 - The JDWP debugger attach configuration remains the same because the Apple task maps host port `5005` to container port `5005`.
-- `bash scripts/polarionctl.sh build-image` starts the builder on demand with an `8g` cap and stops it again after the build.
+- `bash scripts/polarionctl.sh build-image` starts the builder on demand with a `4g` cap and stops it again after the build.
+- Apple `container`, Docker, and Compose use the same `4g` container RAM and `-Xmx3g -Xms3g` defaults unless you override them explicitly.
+- `bash scripts/polarionctl.sh start` mounts a persistent workspace volume so successful starts do not force a fresh full reindex on every container recreation.
+- If no core `polarion.lic` is provided and Polarion opens on the activation page, `bash scripts/polarionctl.sh start` starts the local 30-day trial automatically.
 
 ## Logs and Redeploy
 
@@ -115,6 +120,14 @@ POLARION_RUNTIME=container bash scripts/redeploy.sh path/to/plugin/file polarion
 ```
 
 The redeploy script copies the built JAR into the running Apple `container` instance, clears workspace cache, and restarts the Polarion service.
+
+To force a Polarion workspace reindex from the running container, use:
+
+```bash
+bash scripts/reindex-polarion.sh
+```
+
+That command stops the Polarion service, removes `/opt/polarion/data/workspace/polarion-data`, and also clears `.metadata` and `.config` before starting Polarion again.
 
 If the selected path does not have a `pom.xml` in its upward hierarchy, the redeploy script searches below the selected directory for plugin projects up to `POLARION_REDEPLOY_SEARCH_DEPTH` levels deep. The default is `1`, which matches a plugin workspace root such as `plugins/` that contains multiple `biz.avasis.polarion.*` module folders directly below it.
 

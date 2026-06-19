@@ -37,6 +37,7 @@ Since Polarion requires a license and the installation media is proprietary, you
 3.  **Place** your license files in the repo:
     - Put the Polarion core XML license in `files/` as `polarion.lic`. The start scripts sync XML `polarion.lic` files from `files/` into `/opt/polarion/polarion/license/polarion.lic`.
     - Put the avasis extension license in `data/` as `avasis.licence`. The start scripts sync it into `/opt/polarion/polarion/license/avasis.licence`.
+    - If you omit `files/polarion.lic` for local development, `bash scripts/polarionctl.sh start` auto-starts the local 30-day trial when Polarion lands on the activation page.
 4.  **Build** the Docker image:
     ```bash
     # With Docker
@@ -45,7 +46,7 @@ Since Polarion requires a license and the installation media is proprietary, you
     podman build --network private -t polarion .
     # With Apple container
     container system start
-    container builder start --cpus 8 --memory 8g
+    container builder start --cpus 8 --memory 4g
     container build --platform linux/amd64 -t polarion:local .
     container builder stop
     ```
@@ -79,6 +80,7 @@ docker run -d \
     -e JDWP_ENABLED=true \
     --volume polarion_repo:/opt/polarion/data/svn \
     --volume polarion_extensions:/opt/polarion/polarion/extensions \
+    --volume polarion_workspace:/opt/polarion/data/workspace \
     ghcr.io/phillipboesger/polarion-docker:latest
     ```
     _(Replace `polarion:latest` with the appropriate image name depending on how you built or pulled it)_
@@ -100,6 +102,7 @@ container run -d \
     -e JDWP_ENABLED=true \
     -v polarion_repo:/opt/polarion/data/svn \
     -v polarion_extensions:/opt/polarion/polarion/extensions \
+    -v polarion_workspace:/opt/polarion/data/workspace \
     ghcr.io/phillipboesger/polarion-docker:latest
 ```
 
@@ -116,7 +119,7 @@ Note: Docker Compose files in this repository are Docker-only. Apple `container`
     docker-compose up -d
     ```
 
-The checked-in Compose files cap the Polarion container at `4g` RAM and default the JVM to `-Xmx3g -Xms3g`.
+The checked-in Compose files cap the Polarion container at `4g` RAM, default the JVM to `-Xmx3g -Xms3g`, and persist the Polarion workspace to avoid unnecessary full reindexing after container recreation.
 
 ## ⚙️ Configuration & Customization
 
@@ -148,7 +151,15 @@ After startup, Apache serves the bundled Subversion repository through both of t
 - `http://<host>/repo`
 - `http://<host>/repo-local`
 
-On first start with a new or empty SVN volume, the startup scripts seed the bundled repository data. On later restarts and redeployments with an initialized SVN volume, they leave the repository content in place and normalize the password file both before and after Polarion service startup so the built-in service user remains `polarion` / `aurora` and the bootstrap admin remains `admin` / `admin`, while preserving other existing entries. The scripts also re-apply `polarion:www-data` ownership plus group-write permissions across the mounted SVN data so Apache WebDAV commits can create transaction files under `repo/db`.
+On first start with a new or empty SVN volume, the startup scripts seed the bundled repository data. On later restarts and redeployments with an initialized SVN volume, they leave the repository content in place and normalize the password files both before and after Polarion service startup so the built-in service user remains `polarion` / `aurora` and the bootstrap admin remains `admin` / `admin`, while preserving other existing entries. Polarion's internal `/repo` and `/installrepo` access keep reading the runtime file at `/srv/polarion/svn/passwd`, while the external helper path `/repo-local` reads a dedicated Apache copy at `/etc/apache2/polarion-svn-http.passwd`. The scripts also re-apply `polarion:www-data` ownership plus group-write permissions across the mounted SVN data so Apache WebDAV commits can create transaction files under `repo/db`.
+
+If an existing runtime has drifted and Apache basic auth no longer accepts `admin/admin` or `polarion/aurora`, run:
+
+```bash
+bash scripts/polarionctl.sh repair-auth
+```
+
+The `start` action runs the same normalization automatically after HTTP becomes reachable.
 
 ## 🛠️ Development & Debugging
 
@@ -196,7 +207,8 @@ If you are developing on Apple silicon with macOS 26 or later, see [docs/apple-c
 ## 🔍 Troubleshooting
 
 - **Port Conflicts:** Ensure ports 80, 5005, and 5433 are free.
-- **Memory:** This repo defaults Polarion to `4g` container RAM and a `3g` JVM heap so the process still has native headroom. Increase only if a specific workload requires it.
-- **Apple `container` builder:** `bash scripts/polarionctl.sh build-image` starts the builder on demand with an `8g` cap and stops it again after the image build finishes.
+- **Memory:** Docker, Compose, and Apple `container` use the same `4g` container RAM and `-Xmx3g -Xms3g` defaults unless you override them explicitly.
+- **Apple `container` builder:** `bash scripts/polarionctl.sh build-image` starts the builder on demand with a `4g` cap and stops it again after the image build finishes.
+- **Workspace persistence:** `bash scripts/polarionctl.sh start` now mounts a persistent workspace volume so successful starts do not trigger a fresh full reindex on every restart.
 - **Apple `container` first start:** A cold `linux/amd64` start on Apple silicon can spend multiple minutes in image unpacking before the container becomes visible or HTTP responds.
 - **Access Denied:** If pulling `ghcr.io/...` fails, ensure you have requested and been granted access by the owner, or build locally (Option A).

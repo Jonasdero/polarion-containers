@@ -3,6 +3,9 @@
 SVN_DATA_DIR="/opt/polarion/data/svn"
 SVN_BOOTSTRAP_DIR="/opt/polarion/bootstrap/svn"
 SVN_RUNTIME_DIR="/srv/polarion/svn"
+SVN_HTTP_AUTH_FILE="/etc/apache2/polarion-svn-http.passwd"
+SVN_INTERNAL_PASSWD_FILE="$SVN_DATA_DIR/passwd"
+SVN_EXTERNAL_PASSWD_FILE="$SVN_DATA_DIR/passwd_credentials"
 POLARION_PROPERTIES="/opt/polarion/etc/polarion.properties"
 
 read_polarion_property() {
@@ -63,14 +66,25 @@ SVN_ADMIN_USER="$(read_polarion_property "adminUser" "admin")"
 SVN_ADMIN_PASSWORD="$(read_polarion_property "adminPasswd" "admin")"
 
 normalize_svn_passwd_file \
-	"$SVN_DATA_DIR/passwd" \
+	"$SVN_INTERNAL_PASSWD_FILE" \
 	"$SVN_REPO_USER" \
 	"$SVN_REPO_PASSWORD" \
 	"$SVN_ADMIN_USER" \
 	"$SVN_ADMIN_PASSWORD"
 
-if [ -d "$SVN_RUNTIME_DIR" ] && [ ! "$SVN_RUNTIME_DIR/passwd" -ef "$SVN_DATA_DIR/passwd" ]; then
-	install -o polarion -g www-data -m 0664 "$SVN_DATA_DIR/passwd" "$SVN_RUNTIME_DIR/passwd"
+normalize_svn_passwd_file \
+	"$SVN_EXTERNAL_PASSWD_FILE" \
+	"$SVN_REPO_USER" \
+	"$SVN_REPO_PASSWORD" \
+	"$SVN_ADMIN_USER" \
+	"$SVN_ADMIN_PASSWORD"
+
+if [ -d "$SVN_RUNTIME_DIR" ] && [ ! "$SVN_RUNTIME_DIR/passwd" -ef "$SVN_INTERNAL_PASSWD_FILE" ]; then
+	install -o polarion -g www-data -m 0664 "$SVN_INTERNAL_PASSWD_FILE" "$SVN_RUNTIME_DIR/passwd"
+fi
+
+if [ -d "/etc/apache2" ]; then
+	install -o root -g www-data -m 0644 "$SVN_EXTERNAL_PASSWD_FILE" "$SVN_HTTP_AUTH_FILE"
 fi
 
 chown -R polarion:www-data "$SVN_DATA_DIR"

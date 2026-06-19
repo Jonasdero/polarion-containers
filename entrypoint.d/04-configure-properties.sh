@@ -13,6 +13,7 @@ OTHER_PARAMS=(
     "com.siemens.polarion.license.salt.enabled=false"
     "com.siemens.polarion.analytics.enabled=false"
     "com.polarion.platform.internalPG=polarion:polarion@localhost:5433"
+    "scriptInjection.mainBody=<script src=\"/polarion/ava-karlstorz/assets/ks-planning-serial-guard.js\"></script>"
 )
 
 # Configure allowed hosts for Tomcat service
